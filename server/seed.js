@@ -8,9 +8,9 @@ dotenv.config();
 
 const sampleCourses = [
     {
-        courseTitle: "Complete MERN Stack Development Bootcamp",
-        subTitle: "Learn full-stack web development with MERN stack",
-        description: "Comprehensive course covering MongoDB, Express.js, React.js, and Node.js",
+        courseTitle: "The Ultimate MERN Stack Development Bootcamp: From Zero to Hero",
+        subTitle: "Master the art of full-stack web development using the robust MERN stack technologies",
+        description: "Embark on an in-depth journey into full-stack development with MongoDB, Express.js, React.js, and Node.js. Learn how to build scalable, robust, and dynamic web applications from scratch with step-by-step guidance and practical projects.",
         category: "mern stack development",
         courseLevel: "Beginner",
         coursePrice: 99.99,
@@ -18,9 +18,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Advanced JavaScript Masterclass",
-        subTitle: "Master JavaScript programming with advanced concepts",
-        description: "Deep dive into JavaScript including ES6+, async programming, and design patterns",
+        courseTitle: "Advanced JavaScript Masterclass: Unlock the Full Power of JavaScript",
+        subTitle: "Explore cutting-edge JavaScript techniques and concepts for professional developers",
+        description: "Gain a deep understanding of advanced JavaScript concepts, including ES6+, asynchronous programming, closures, and design patterns. This course is designed to enhance your coding skills and prepare you for complex real-world applications.",
         category: "javascript",
         courseLevel: "Advance",
         coursePrice: 79.99,
@@ -28,9 +28,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Python for Data Science",
-        subTitle: "Learn Python for data analysis and visualization",
-        description: "Comprehensive course on Python, NumPy, Pandas, and data visualization",
+        courseTitle: "Python for Data Science: Analyze, Visualize, and Innovate",
+        subTitle: "Master Python programming for comprehensive data science solutions",
+        description: "Delve into the world of data science with this extensive Python course. Learn the essentials of Python, NumPy, and Pandas while gaining expertise in data analysis, visualization, and real-world problem-solving.",
         category: "data science",
         courseLevel: "Medium",
         coursePrice: 89.99,
@@ -38,9 +38,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Next.js Full Stack Development",
-        subTitle: "Build modern web applications with Next.js",
-        description: "Learn to build full-stack applications using Next.js, React, and MongoDB",
+        courseTitle: "Next.js Full Stack Development: Build Modern Applications with Ease",
+        subTitle: "Discover how to create seamless full-stack web applications with Next.js",
+        description: "Learn how to harness the power of Next.js to build high-performance, SEO-friendly web applications. This course covers everything from React fundamentals to advanced server-side rendering and database integration with MongoDB.",
         category: "nextjs",
         courseLevel: "Medium",
         coursePrice: 129.99,
@@ -48,9 +48,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Frontend Development Fundamentals",
-        subTitle: "Master modern frontend development",
-        description: "Learn HTML, CSS, JavaScript, and React for building beautiful user interfaces",
+        courseTitle: "Frontend Development Fundamentals: Create Stunning Web Interfaces",
+        subTitle: "A complete beginner's guide to mastering modern frontend development tools and techniques",
+        description: "Learn the core principles of frontend development, including HTML, CSS, JavaScript, and React. Build visually appealing, user-friendly web interfaces with hands-on projects and expert insights.",
         category: "frontend development",
         courseLevel: "Beginner",
         coursePrice: 69.99,
@@ -58,9 +58,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Backend Development with Node.js",
-        subTitle: "Build scalable backend services",
-        description: "Learn Node.js, Express.js, and MongoDB for backend development",
+        courseTitle: "Backend Development with Node.js: Build Scalable and Secure Servers",
+        subTitle: "Master backend development by learning Node.js, Express.js, and MongoDB",
+        description: "Gain the skills to build and manage powerful backend systems using Node.js. This course covers everything from setting up servers with Express.js to managing data with MongoDB, focusing on scalability and security.",
         category: "backend development",
         courseLevel: "Medium",
         coursePrice: 89.99,
@@ -68,9 +68,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Python Programming Masterclass",
-        subTitle: "Become a Python expert",
-        description: "Comprehensive Python programming from basics to advanced concepts",
+        courseTitle: "Python Programming Masterclass: From Fundamentals to Advanced Concepts",
+        subTitle: "Learn Python programming like a pro with this all-in-one course",
+        description: "Master Python programming with this comprehensive course covering basics, advanced concepts, and real-world applications. Learn to code efficiently and solve complex problems with Python.",
         category: "python",
         courseLevel: "Beginner",
         coursePrice: 79.99,
@@ -78,9 +78,9 @@ const sampleCourses = [
         isPublished: true
     },
     {
-        courseTitle: "Docker for Developers",
-        subTitle: "Learn container technology",
-        description: "Master Docker for modern application deployment",
+        courseTitle: "Docker for Developers: Simplify Application Deployment with Containers",
+        subTitle: "Understand container technology to modernize your development workflow",
+        description: "Learn how to use Docker to streamline application development and deployment. This course includes hands-on exercises to teach you the fundamentals of containerization, Docker Compose, and image management.",
         category: "docker",
         courseLevel: "Medium",
         coursePrice: 69.99,
@@ -88,6 +88,7 @@ const sampleCourses = [
         isPublished: true
     }
 ];
+
 
 const seedDB = async () => {
     try {

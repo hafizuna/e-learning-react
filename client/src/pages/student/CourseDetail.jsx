@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useGetCourseByIdQuery } from "@/features/api/courseApi";
+import { useGetCourseDetailWithStatusQuery } from "@/features/api/purchaseApi";
 import { BadgeInfo, Lock, PlayCircle } from "lucide-react";
 import React from "react";
 import ReactPlayer from "react-player";
@@ -19,18 +19,19 @@ const CourseDetail = () => {
   const params = useParams();
   const courseId = params.courseId;
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useGetCourseByIdQuery(courseId);
+  const { data, isLoading, isError } = useGetCourseDetailWithStatusQuery(courseId);
 
   if (isLoading) return <h1>Loading...</h1>;
   if (isError) return <h1>Failed to load course details</h1>;
   if (!data?.course) return <h1>Course not found</h1>;
 
-  const { course } = data;
-  console.log('Course data:', course);
+  const { course, isPurchased, hasPendingPurchase } = data;
+  console.log('Course data:', course, 'Purchase Status:', { isPurchased, hasPendingPurchase });
 
   const handleContinueCourse = () => {
-    navigate(`/course-progress/${courseId}`)
-  }
+    console.log('Navigating to course progress:', courseId);
+    navigate(`/course-progress/${courseId}`);
+  };
 
   return (
     <div className="space-y-5">
@@ -69,7 +70,11 @@ const CourseDetail = () => {
               {course?.lectures?.map((lecture, idx) => (
                 <div key={idx} className="flex items-center gap-3 text-sm">
                   <span>
-                    <Lock size={14} />
+                    {isPurchased || lecture.isPreviewFree ? (
+                      <PlayCircle size={14} className="text-green-500" />
+                    ) : (
+                      <Lock size={14} />
+                    )}
                   </span>
                   <p>{lecture.lectureTitle}</p>
                 </div>
@@ -111,10 +116,28 @@ const CourseDetail = () => {
                 )}
               </div>
               <Separator className="my-2" />
-              <h1 className="text-lg md:text-xl font-semibold">${course?.coursePrice}</h1>
+              <h1 className="text-lg md:text-xl font-semibold">ETB {course?.coursePrice}</h1>
             </CardContent>
             <CardFooter className="flex justify-center p-4">
-              <BuyCourseButton courseId={courseId} />
+              {isPurchased ? (
+                <Button 
+                  className="w-full" 
+                  onClick={handleContinueCourse}
+                  variant="default"
+                >
+                  Continue Learning
+                </Button>
+              ) : hasPendingPurchase ? (
+                <Button 
+                  className="w-full" 
+                  variant="secondary"
+                  disabled
+                >
+                  Payment Pending
+                </Button>
+              ) : (
+                <BuyCourseButton courseId={courseId} />
+              )}
             </CardFooter>
           </Card>
         </div>
