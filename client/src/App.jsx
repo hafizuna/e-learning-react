@@ -17,6 +17,7 @@ import CourseDetail from "./pages/student/CourseDetail";
 import CourseProgress from "./pages/student/CourseProgress";
 import SearchPage from "./pages/student/SearchPage";
 import VerifyPayment from "./pages/student/VerifyPayment";
+import Tests from "./pages/admin/test/Tests";
 import {
   AdminRoute,
   AuthenticatedUser,
@@ -114,6 +115,10 @@ const appRouter = createBrowserRouter([
           {
             path: "course",
             element: <CourseTable />,
+          },
+          {
+            path: "test",
+            element: <Tests />,
           },
           {
             path: "course/add",
