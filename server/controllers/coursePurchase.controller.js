@@ -1,284 +1,279 @@
 import { Course } from "../models/course.model.js";
 import { CoursePurchase } from "../models/coursePurchase.model.js";
 import { User } from "../models/user.model.js";
-import { initializePayment, verifyTransaction, generateTransactionRef } from "../config/chapa.js";
+import axios from "axios";
 
-// Helper function to truncate text
-const truncate = (str, maxLength) => {
-  if (str.length <= maxLength) return str;
-  return str.substr(0, maxLength - 3) + '...';
-};
-
-// Helper function to sanitize text for Chapa
-const sanitizeText = (text) => {
-  return text.replace(/[^a-zA-Z0-9\s.-]/g, '');
-};
+const CHAPA_URL = process.env.CHAPA_URL;
+const CHAPA_AUTH = { headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` } };
 
 export const createCheckoutSession = async (req, res) => {
   try {
-    const userId = req.id;
     const { courseId } = req.body;
+    const userId = req.id;
 
-    const course = await Course.findById(courseId);
+    // Find the course and user
+    const [course, user] = await Promise.all([
+      Course.findById(courseId),
+      User.findById(userId)
+    ]);
+
     if (!course) {
-      return res.status(404).json({ message: "Course not found!" });
+      return res.status(404).json({ message: "Course not found" });
     }
 
-    const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found!" });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Check for existing pending purchase
-    const existingPending = await CoursePurchase.findOne({
-      courseId,
+    // Check if user already purchased this course
+    const existingPurchase = await CoursePurchase.findOne({
       userId,
-      status: "pending",
-      createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) }
+      courseId,
+      status: "completed"
     });
 
-    if (existingPending) {
-      return res.status(400).json({
-        success: false,
-        message: "You have a pending payment for this course. Please complete it or wait 30 minutes to try again."
-      });
+    if (existingPurchase) {
+      return res.status(400).json({ message: "Course already purchased" });
     }
 
-    // Clean up old pending purchases
-    await CoursePurchase.updateMany(
-      {
-        courseId,
-        userId,
-        status: "pending",
-        createdAt: { $lt: new Date(Date.now() - 30 * 60 * 1000) }
-      },
-      { $set: { status: "failed" } }
-    );
-
-    // Generate unique transaction reference
-    const tx_ref = generateTransactionRef();
-
-    // Create a new course purchase record
-    const newPurchase = new CoursePurchase({
-      courseId,
+    // Check for pending purchase
+    const pendingPurchase = await CoursePurchase.findOne({
       userId,
-      amount: course.coursePrice,
+      courseId,
       status: "pending",
-      paymentId: tx_ref
+      createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) } // Less than 30 minutes old
     });
 
-    // Get the webhook URL - prefer environment variable, fallback to localhost
-    const webhookUrl = process.env.WEBHOOK_URL || `${process.env.SERVER_URL}/api/v1/purchase/webhook`;
-    console.log('Using webhook URL:', webhookUrl);
+    if (pendingPurchase) {
+      return res.status(400).json({ message: "You have a pending payment for this course" });
+    }
+
+    // Generate unique transaction reference (shorter version)
+    const tx_ref = `${Date.now()}-${courseId.slice(-6)}`;
+
+    // Convert price to cents/lowest denomination and back to string with 2 decimals
+    const amount = course.coursePrice.toFixed(2);
+
+    // Create a pending purchase record
+    const purchase = new CoursePurchase({
+      userId,
+      courseId,
+      paymentId: tx_ref,
+      status: "pending",
+      amount: course.coursePrice
+    });
+    await purchase.save();
 
     // Get the return URL
     const returnUrl = process.env.CLIENT_URL 
-      ? `${process.env.CLIENT_URL}/course-progress/${courseId}`
-      : `http://localhost:5173/course-progress/${courseId}`;
-
-    // Prepare customization data with proper length limits
-    const customization = {
-      title: truncate(sanitizeText(course.courseTitle), 16),
-      description: truncate(course.subTitle || course.courseTitle, 50)
-    };
+      ? `${process.env.CLIENT_URL}/verify-payment/${tx_ref}`
+      : `http://localhost:5173/verify-payment/${tx_ref}`;
 
     // Initialize Chapa payment
     const paymentData = {
-      amount: course.coursePrice.toString(),
+      amount,
       currency: 'ETB',
       email: user.email,
       first_name: user.name.split(' ')[0],
       last_name: user.name.split(' ').slice(1).join(' ') || 'Student',
       tx_ref,
-      callback_url: webhookUrl,
-      return_url: `${process.env.CLIENT_URL}/course-progress/${courseId}`,
-      customization
+      return_url: returnUrl,
+      callback_url: returnUrl,
+      customization: {
+        title: 'Course Purchase',
+        description: 'Purchase course access'
+      }
     };
 
-    console.log('Initializing Chapa payment with:', {
-      ...paymentData,
-      webhook_url: webhookUrl,
-      return_url: returnUrl
-    });
+    console.log('Initializing payment with data:', JSON.stringify(paymentData, null, 2));
 
-    const chapaResponse = await initializePayment(paymentData);
+    const response = await axios.post(
+      `${CHAPA_URL}/transaction/initialize`,
+      paymentData,
+      CHAPA_AUTH
+    );
 
-    if (!chapaResponse.data?.checkout_url) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Error while creating payment session" 
-      });
+    console.log('Chapa API response:', JSON.stringify(response.data, null, 2));
+
+    if (!response.data || !response.data.data || !response.data.data.checkout_url) {
+      throw new Error('Invalid response from Chapa API: ' + JSON.stringify(response.data));
     }
 
-    // Save the purchase record
-    await newPurchase.save();
-
-    // Set a timeout to mark the payment as failed if not completed
-    setTimeout(async () => {
-      const purchase = await CoursePurchase.findOne({ paymentId: tx_ref });
-      if (purchase && purchase.status === "pending") {
-        purchase.status = "failed";
-        await purchase.save();
-        console.log(`Payment ${tx_ref} marked as failed due to timeout`);
-      }
-    }, 30 * 60 * 1000); // 30 minutes timeout
-
     return res.status(200).json({
-      success: true,
-      url: chapaResponse.data.checkout_url
+      status: 'success',
+      url: response.data.data.checkout_url,
+      tx_ref
     });
 
   } catch (error) {
-    console.error('Payment initialization error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.response?.data?.message || "Internal server error while creating payment session"
+    console.error('Error creating checkout session:', error.response?.data || error.message);
+    
+    // Delete the pending purchase if payment initialization failed
+    if (tx_ref) {
+      await CoursePurchase.findOneAndDelete({ paymentId: tx_ref });
+    }
+
+    return res.status(error.response?.status || 500).json({ 
+      status: 'error',
+      message: "Failed to initialize payment",
+      details: error.response?.data || error.message 
     });
   }
 };
 
-export const chapaWebhook = async (req, res) => {
+// New endpoint to verify payment status
+export const verifyPayment = async (req, res) => {
   try {
-    console.log('Received webhook payload:', {
-      body: req.body,
-      headers: req.headers,
-      rawBody: req.rawBody
+    const { tx_ref } = req.params;
+
+    // Find the purchase record (not necessarily pending)
+    const purchase = await CoursePurchase.findOne({ 
+      paymentId: tx_ref
     });
 
-    const { tx_ref, status } = req.body;
-    
-    if (!tx_ref) {
-      console.error('No tx_ref in webhook payload');
-      return res.status(400).json({ message: 'Missing tx_ref' });
-    }
-
-    // Verify the transaction with Chapa
-    try {
-      const verificationResponse = await verifyTransaction(tx_ref);
-      console.log('Chapa verification response:', verificationResponse);
-      
-      if (!verificationResponse.data || verificationResponse.data.status !== 'success') {
-        console.error('Transaction verification failed:', verificationResponse);
-        return res.status(400).json({ message: 'Invalid transaction' });
-      }
-    } catch (verifyError) {
-      console.error('Error verifying transaction:', verifyError);
-      return res.status(500).json({ message: 'Error verifying transaction' });
-    }
-
-    // Find the purchase record
-    const purchase = await CoursePurchase.findOne({ paymentId: tx_ref });
     if (!purchase) {
-      console.error('Purchase record not found for tx_ref:', tx_ref);
-      return res.status(404).json({ message: 'Purchase record not found' });
+      return res.status(404).json({ 
+        status: 'error',
+        message: "Purchase record not found",
+        courseId: tx_ref.split('-')[1] // Extract courseId from tx_ref
+      });
     }
 
-    console.log('Found purchase record:', purchase);
-
-    // Update purchase status
-    const oldStatus = purchase.status;
-    purchase.status = status === 'success' ? 'completed' : 'failed';
-    await purchase.save();
-    
-    console.log(`Updated purchase status from ${oldStatus} to ${purchase.status}`);
-
-    // If payment successful, update user's enrolled courses
-    if (status === 'success') {
-      console.log('Payment successful, updating enrollments...');
-      
-      try {
-        // Update user's enrolled courses
-        await User.findByIdAndUpdate(
-          purchase.userId,
-          { $addToSet: { enrolledCourses: purchase.courseId } }
-        );
-
-        // Update course's enrolled students
-        await Course.findByIdAndUpdate(
-          purchase.courseId,
-          { $addToSet: { enrolledStudents: purchase.userId } }
-        );
-        
-        console.log('Successfully updated enrollments');
-      } catch (enrollError) {
-        console.error('Error updating enrollments:', enrollError);
-        // Don't return error - payment was still successful
-      }
+    // If already completed, return success
+    if (purchase.status === "completed") {
+      return res.status(200).json({
+        status: 'success',
+        message: 'Payment already verified',
+        courseId: purchase.courseId
+      });
     }
 
-    return res.status(200).json({ 
-      message: 'Webhook processed successfully',
-      status: purchase.status,
-      tx_ref
-    });
+    // Verify payment with Chapa
+    const response = await axios.get(
+      `${CHAPA_URL}/transaction/verify/${tx_ref}`,
+      CHAPA_AUTH
+    );
+
+    console.log('Payment verification response:', response.data);
+
+    if (response.data.status === 'success') {
+      // Update purchase status to completed
+      purchase.status = "completed";
+      await purchase.save();
+
+      // Add user to course's enrolled students if not already added
+      await Course.findByIdAndUpdate(
+        purchase.courseId,
+        { $addToSet: { enrolledStudents: purchase.userId } }
+      );
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Payment verified successfully',
+        courseId: purchase.courseId
+      });
+    } else {
+      // Payment failed or pending
+      return res.status(400).json({
+        status: 'error',
+        message: 'Payment verification failed',
+        courseId: purchase.courseId,
+        details: response.data
+      });
+    }
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    console.error('Error verifying payment:', error.response?.data || error.message);
+    // Try to extract courseId from tx_ref if possible
+    const courseId = req.params.tx_ref.split('-')[1];
     return res.status(500).json({ 
-      message: 'Error processing webhook',
-      error: error.message 
+      status: 'error',
+      message: "Failed to verify payment",
+      courseId,
+      details: error.response?.data || error.message 
     });
   }
 };
 
 export const getCourseDetailWithPurchaseStatus = async (req, res) => {
   try {
-    const userId = req.id;
     const { courseId } = req.params;
+    const userId = req.id;
 
+    // Get course details
     const course = await Course.findById(courseId)
-      .populate("creator", "name")
-      .populate("lectures");
+      .populate('creator', 'name email')
+      .populate('lectures')
+      .select('-enrolledStudents'); // Don't send enrolled students list
 
     if (!course) {
-      return res.status(404).json({ message: "Course not found!" });
+      return res.status(404).json({ message: "Course not found" });
     }
 
-    // Check for a completed purchase
-    const completedPurchase = await CoursePurchase.findOne({
+    // Get all completed purchases for this course
+    const totalPurchases = await CoursePurchase.countDocuments({
       courseId,
-      userId,
-      status: "completed",
+      status: "completed"
     });
 
-    // Check for a pending purchase
+    // Check if the current user has purchased this course
+    const userPurchase = await CoursePurchase.findOne({
+      userId,
+      courseId,
+      status: "completed"
+    });
+
+    // Check for pending purchase
     const pendingPurchase = await CoursePurchase.findOne({
-      courseId,
       userId,
+      courseId,
       status: "pending",
+      createdAt: { $gt: new Date(Date.now() - 30 * 60 * 1000) }
     });
 
-    // Add purchase status information to the response
+    // Prepare course data with purchase status
+    const courseData = {
+      ...course.toObject(),
+      totalEnrolled: totalPurchases,
+      lectures: course.lectures.map(lecture => ({
+        ...lecture.toObject(),
+        videoUrl: lecture.isPreviewFree ? lecture.videoUrl : null // Only send video URL for preview lectures
+      }))
+    };
+
     return res.status(200).json({
-      success: true,
-      course,
-      isPurchased: !!completedPurchase,
-      hasPendingPurchase: !!pendingPurchase,
-      purchaseStatus: completedPurchase ? "completed" : (pendingPurchase ? "pending" : "none")
+      course: courseData,
+      isPurchased: !!userPurchase,
+      hasPendingPurchase: !!pendingPurchase
     });
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Error fetching course details" });
+    console.error('Error getting course details:', error);
+    return res.status(500).json({ message: "Failed to get course details" });
   }
 };
 
-export const getAllPurchasedCourse = async (req, res) => {
+export const getAllPurchasedCourses = async (req, res) => {
   try {
-    const purchasedCourse = await CoursePurchase.find({
-      status: "completed",
+    const userId = req.id;
+
+    // Find all completed purchases for the user
+    const purchases = await CoursePurchase.find({
+      userId,
+      status: "completed"
     }).populate({
-      path: "courseId",
-      populate: {
-        path: "creator",
-        select: "name",
-      },
+      path: 'courseId',
+      populate: [
+        { path: 'creator', select: 'name email' },
+        { path: 'lectures' }
+      ]
     });
 
-    return res.status(200).json({
-      success: true,
-      purchasedCourse,
-    });
+    // Extract course details from purchases
+    const courses = purchases.map(purchase => purchase.courseId);
+
+    return res.status(200).json({ courses });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Error fetching purchased courses" });
+    console.error('Error getting purchased courses:', error);
+    return res.status(500).json({ message: "Error getting purchased courses" });
   }
 };

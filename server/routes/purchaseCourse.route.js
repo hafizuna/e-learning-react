@@ -1,28 +1,27 @@
 import express from "express";
-import isAuthenticated from "../middlewares/isAuthenticated.js";
-import { 
-  createCheckoutSession, 
-  getAllPurchasedCourse, 
-  getCourseDetailWithPurchaseStatus, 
-  chapaWebhook 
+import {
+  createCheckoutSession,
+  getCourseDetailWithPurchaseStatus,
+  getAllPurchasedCourses,
+  verifyPayment,
 } from "../controllers/coursePurchase.controller.js";
+import isAuthenticated from "../middlewares/isAuthenticated.js";
+import checkPurchaseAccess from "../middlewares/checkPurchaseAccess.js";
 
 const router = express.Router();
 
-// Regular routes with authentication
-router.route("/checkout/create-checkout-session").post(isAuthenticated, createCheckoutSession);
-router.route("/course/:courseId/detail-with-status").get(isAuthenticated, getCourseDetailWithPurchaseStatus);
-router.route("/").get(isAuthenticated, getAllPurchasedCourse);
+// Public routes (still need authentication)
+router.get("/course/:courseId/detail-with-status", isAuthenticated, getCourseDetailWithPurchaseStatus);
 
-// Webhook route - no authentication required, but verify Chapa signature
-router.route("/webhook")
-  .post(
-    express.json({ 
-      verify: (req, res, buf) => {
-        req.rawBody = buf.toString();
-      }
-    }), 
-    chapaWebhook
-  );
+// Purchase-related routes
+router.post("/checkout/create-checkout-session", isAuthenticated, createCheckoutSession);
+router.get("/verify/:tx_ref", isAuthenticated, verifyPayment);
+
+// Protected routes requiring purchase
+router.get("/", isAuthenticated, getAllPurchasedCourses);
+router.get("/course/:courseId/content", isAuthenticated, checkPurchaseAccess, (req, res) => {
+  // This route will only be accessible if the user has purchased the course
+  res.json({ success: true, purchase: req.purchase });
+});
 
 export default router;

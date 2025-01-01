@@ -26,10 +26,8 @@ const CourseDetail = () => {
   if (!data?.course) return <h1>Course not found</h1>;
 
   const { course, isPurchased, hasPendingPurchase } = data;
-  console.log('Course data:', course, 'Purchase Status:', { isPurchased, hasPendingPurchase });
 
   const handleContinueCourse = () => {
-    console.log('Navigating to course progress:', courseId);
     navigate(`/course-progress/${courseId}`);
   };
 
@@ -51,7 +49,7 @@ const CourseDetail = () => {
             <BadgeInfo size={16} />
             <p>Last updated {new Date(course?.createdAt).toLocaleDateString()}</p>
           </div>
-          <p>Students enrolled: {course?.enrolledStudents?.length || 0}</p>
+          <p>Students enrolled: {course?.totalEnrolled || 0}</p>
         </div>
       </div>
       <div className="max-w-7xl mx-auto my-5 px-4 md:px-8 flex flex-col lg:flex-row justify-between gap-10">
@@ -87,7 +85,7 @@ const CourseDetail = () => {
             <CardContent className="p-4 flex flex-col">
               <div className="w-full aspect-video mb-4">
                 {course?.lectures?.map((lecture, idx) => 
-                  lecture.isPreviewFree && (
+                  lecture.isPreviewFree && lecture.videoUrl && (
                     <div key={idx}>
                       <ReactPlayer
                         width="100%"
@@ -99,46 +97,25 @@ const CourseDetail = () => {
                       <p className="mt-2 text-sm font-medium">Preview: {lecture.lectureTitle}</p>
                     </div>
                   )
-                )[0] || (
-                  course?.lectures?.[0]?.videoUrl && (
-                    <div>
-                      <ReactPlayer
-                        width="100%"
-                        height="100%"
-                        url={course.lectures[0].videoUrl}
-                        controls={false}
-                        light={true}
-                        playIcon={<Lock className="w-12 h-12 text-white" />}
-                      />
-                      <p className="mt-2 text-sm text-muted-foreground">Preview not available</p>
-                    </div>
-                  )
                 )}
               </div>
-              <Separator className="my-2" />
-              <h1 className="text-lg md:text-xl font-semibold">ETB {course?.coursePrice}</h1>
+              <div className="text-2xl font-bold mb-4">₹{course?.coursePrice}</div>
+              <div className="space-y-4">
+                {isPurchased ? (
+                  <Button onClick={handleContinueCourse} className="w-full">
+                    Continue Learning
+                  </Button>
+                ) : (
+                  <BuyCourseButton 
+                    courseId={courseId} 
+                    disabled={hasPendingPurchase}
+                    className="w-full"
+                  >
+                    {hasPendingPurchase ? 'Payment Pending...' : 'Purchase Course'}
+                  </BuyCourseButton>
+                )}
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-center p-4">
-              {isPurchased ? (
-                <Button 
-                  className="w-full" 
-                  onClick={handleContinueCourse}
-                  variant="default"
-                >
-                  Continue Learning
-                </Button>
-              ) : hasPendingPurchase ? (
-                <Button 
-                  className="w-full" 
-                  variant="secondary"
-                  disabled
-                >
-                  Payment Pending
-                </Button>
-              ) : (
-                <BuyCourseButton courseId={courseId} />
-              )}
-            </CardFooter>
           </Card>
         </div>
       </div>

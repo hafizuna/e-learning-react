@@ -16,6 +16,7 @@ import EditLecture from "./pages/admin/lecture/EditLecture";
 import CourseDetail from "./pages/student/CourseDetail";
 import CourseProgress from "./pages/student/CourseProgress";
 import SearchPage from "./pages/student/SearchPage";
+import VerifyPayment from "./pages/student/VerifyPayment";
 import {
   AdminRoute,
   AuthenticatedUser,
@@ -83,8 +84,16 @@ const appRouter = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <PurchaseCourseProtectedRoute>
-            <CourseProgress />
+              <CourseProgress />
             </PurchaseCourseProtectedRoute>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "verify-payment/:tx_ref",
+        element: (
+          <ProtectedRoute>
+            <VerifyPayment />
           </ProtectedRoute>
         ),
       },
@@ -103,23 +112,23 @@ const appRouter = createBrowserRouter([
             element: <Dashboard />,
           },
           {
-            path: "course",
+            path: "courses",
             element: <CourseTable />,
           },
           {
-            path: "course/create",
+            path: "course/add",
             element: <AddCourse />,
           },
           {
-            path: "course/:courseId",
+            path: "course/edit/:courseId",
             element: <EditCourse />,
           },
           {
-            path: "course/:courseId/lecture",
+            path: "lecture/create/:courseId",
             element: <CreateLecture />,
           },
           {
-            path: "course/:courseId/lecture/:lectureId",
+            path: "lecture/edit/:courseId/:lectureId",
             element: <EditLecture />,
           },
         ],
@@ -132,7 +141,7 @@ function App() {
   return (
     <main>
       <ThemeProvider>
-      <RouterProvider router={appRouter} />
+        <RouterProvider router={appRouter} />
       </ThemeProvider>
     </main>
   );

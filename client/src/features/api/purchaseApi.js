@@ -16,9 +16,21 @@ export const purchaseApi = createApi({
         body: { courseId },
       }),
     }),
+    verifyPayment: builder.mutation({
+      query: (tx_ref) => ({
+        url: `/verify/${tx_ref}`,
+        method: "GET",
+      }),
+    }),
     getCourseDetailWithStatus: builder.query({
       query: (courseId) => ({
         url: `/course/${courseId}/detail-with-status`,
+        method: "GET",
+      }),
+    }),
+    getCourseContent: builder.query({
+      query: (courseId) => ({
+        url: `/course/${courseId}/content`,
         method: "GET",
       }),
     }),
@@ -33,6 +45,8 @@ export const purchaseApi = createApi({
 
 export const {
   useCreateCheckoutSessionMutation,
+  useVerifyPaymentMutation,
   useGetCourseDetailWithStatusQuery,
+  useGetCourseContentQuery,
   useGetPurchasedCoursesQuery,
 } = purchaseApi;
