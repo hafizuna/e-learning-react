@@ -15,6 +15,7 @@ import CreateLecture from "./pages/admin/lecture/CreateLecture";
 import EditLecture from "./pages/admin/lecture/EditLecture";
 import CourseDetail from "./pages/student/CourseDetail";
 import CourseProgress from "./pages/student/CourseProgress";
+import CourseTest from "./pages/student/CourseTest"; // Added import statement
 import SearchPage from "./pages/student/SearchPage";
 import VerifyPayment from "./pages/student/VerifyPayment";
 import Tests from "./pages/admin/test/Tests";
@@ -87,6 +88,14 @@ const appRouter = createBrowserRouter([
             <PurchaseCourseProtectedRoute>
               <CourseProgress />
             </PurchaseCourseProtectedRoute>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "course-test/:courseId",
+        element: (
+          <ProtectedRoute>
+            <CourseTest />
           </ProtectedRoute>
         ),
       },

@@ -7,13 +7,14 @@ import {
   useInCompleteCourseMutation,
   useUpdateLectureProgressMutation,
 } from "@/features/api/courseProgressApi";
-import { CheckCircle, CheckCircle2, CirclePlay } from "lucide-react";
+import { CheckCircle, CheckCircle2, CirclePlay, PenSquare } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const CourseProgress = () => {
   const params = useParams();
+  const navigate = useNavigate();
   const courseId = params.courseId;
   const { data, isLoading, isError, refetch } =
     useGetCourseProgressQuery(courseId);
@@ -29,8 +30,6 @@ const CourseProgress = () => {
   ] = useInCompleteCourseMutation();
 
   useEffect(() => {
-    console.log(markCompleteData);
-
     if (completedSuccess) {
       refetch();
       toast.success(markCompleteData.message);
@@ -46,12 +45,10 @@ const CourseProgress = () => {
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Failed to load course details</p>;
 
-  console.log(data);
-
   const { courseDetails, progress, completed } = data.data;
   const { courseTitle } = courseDetails;
 
-  // initialze the first lecture is not exist
+  // initialize the first lecture if not exist
   const initialLecture =
     currentLecture || (courseDetails.lectures && courseDetails.lectures[0]);
 
@@ -60,21 +57,38 @@ const CourseProgress = () => {
   };
 
   const handleLectureProgress = async (lectureId) => {
-    await updateLectureProgress({ courseId, lectureId });
-    refetch();
+    try {
+      await updateLectureProgress({ courseId, lectureId }).unwrap();
+      refetch();
+    } catch (error) {
+      toast.error(error?.data?.message || "Something went wrong");
+    }
   };
+
   // Handle select a specific lecture to watch
   const handleSelectLecture = (lecture) => {
     setCurrentLecture(lecture);
     handleLectureProgress(lecture._id);
   };
 
-
   const handleCompleteCourse = async () => {
-    await completeCourse(courseId);
+    try {
+      await completeCourse({ courseId }).unwrap();
+    } catch (error) {
+      toast.error(error?.data?.message || "Something went wrong");
+    }
   };
+
   const handleInCompleteCourse = async () => {
-    await inCompleteCourse(courseId);
+    try {
+      await inCompleteCourse({ courseId }).unwrap();
+    } catch (error) {
+      toast.error(error?.data?.message || "Something went wrong");
+    }
+  };
+
+  const handleTakeTest = () => {
+    navigate(`/course-test/${courseId}`);
   };
 
   return (
@@ -82,18 +96,29 @@ const CourseProgress = () => {
       {/* Display course name  */}
       <div className="flex justify-between mb-4">
         <h1 className="text-2xl font-bold">{courseTitle}</h1>
-        <Button
-          onClick={completed ? handleInCompleteCourse : handleCompleteCourse}
-          variant={completed ? "outline" : "default"}
-        >
-          {completed ? (
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2" /> <span>Completed</span>{" "}
-            </div>
-          ) : (
-            "Mark as completed"
+        <div className="space-x-2">
+          <Button
+            onClick={completed ? handleInCompleteCourse : handleCompleteCourse}
+            variant={completed ? "outline" : "default"}
+          >
+            {completed ? (
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2" /> <span>Completed</span>{" "}
+              </div>
+            ) : (
+              "Mark as completed"
+            )}
+          </Button>
+          {completed && (
+            <Button
+              onClick={handleTakeTest}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            >
+              <PenSquare className="h-4 w-4 mr-2" />
+              Take Test
+            </Button>
           )}
-        </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
@@ -110,7 +135,7 @@ const CourseProgress = () => {
             />
           </div>
           {/* Display current watching lecture title */}
-          <div className="mt-2 ">
+          <div className="mt-2">
             <h3 className="font-medium text-lg">
               {`Lecture ${
                 courseDetails.lectures.findIndex(
@@ -123,18 +148,19 @@ const CourseProgress = () => {
             </h3>
           </div>
         </div>
+
         {/* Lecture Sidebar  */}
         <div className="flex flex-col w-full md:w-2/5 border-t md:border-t-0 md:border-l border-gray-200 md:pl-4 pt-4 md:pt-0">
-          <h2 className="font-semibold text-xl mb-4">Course Lecture</h2>
+          <h2 className="font-semibold text-xl mb-4">Course Lectures</h2>
           <div className="flex-1 overflow-y-auto">
             {courseDetails?.lectures.map((lecture) => (
               <Card
                 key={lecture._id}
                 className={`mb-3 hover:cursor-pointer transition transform ${
                   lecture._id === currentLecture?._id
-                    ? "bg-gray-200 dark:dark:bg-gray-800"
+                    ? "bg-gray-200 dark:bg-gray-800"
                     : ""
-                } `}
+                }`}
                 onClick={() => handleSelectLecture(lecture)}
               >
                 <CardContent className="flex items-center justify-between p-4">
@@ -152,7 +178,7 @@ const CourseProgress = () => {
                   </div>
                   {isLectureCompleted(lecture._id) && (
                     <Badge
-                      variant={"outline"}
+                      variant="outline"
                       className="bg-green-200 text-green-600"
                     >
                       Completed
