@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGetPurchasedCoursesQuery } from "@/features/api/purchaseApi";
 import React from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { Loader2, TrendingUp, Users, DollarSign, BookOpen } from "lucide-react";
 
 const Dashboard = () => {
   const { data, isLoading, isError } = useGetPurchasedCoursesQuery();
@@ -9,33 +10,41 @@ const Dashboard = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <h1 className="text-xl text-gray-500">Loading dashboard data...</h1>
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <h1 className="text-xl text-red-500">Failed to load dashboard data</h1>
+      <div className="flex items-center justify-center min-h-[400px] text-center">
+        <div className="p-6 max-w-sm mx-auto backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl border border-red-100 dark:border-red-900/20">
+          <div className="text-red-500 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Failed to Load Data
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            There was an error loading the dashboard data. Please try again later.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Safely access purchasedCourse with a default empty array
   const purchasedCourses = data?.purchasedCourse || [];
-
-  // Calculate total revenue and sales
   const totalRevenue = purchasedCourses.reduce(
     (acc, purchase) => acc + (purchase.amount || 0),
     0
   );
-
   const totalSales = purchasedCourses.length;
+  const averageRevenue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-  // Prepare data for the chart
   const courseData = purchasedCourses
-    .filter(purchase => purchase.courseId) // Filter out any null courseIds
+    .filter(purchase => purchase.courseId)
     .map(purchase => ({
       name: purchase.courseId.courseTitle || 'Untitled Course',
       price: purchase.courseId.coursePrice || 0,
@@ -43,70 +52,131 @@ const Dashboard = () => {
     }));
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Total Sales</CardTitle>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          Dashboard Overview
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Track your course performance and revenue metrics
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Total Sales
+            </CardTitle>
+            <Users className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-blue-600">{totalSales}</p>
-            <p className="text-sm text-gray-500 mt-1">Total courses sold</p>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalSales}</div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">courses sold</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Total Revenue</CardTitle>
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Total Revenue
+            </CardTitle>
+            <DollarSign className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-blue-600">₹{totalRevenue}</p>
-            <p className="text-sm text-gray-500 mt-1">Total earnings</p>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              ${totalRevenue.toFixed(2)}
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">total earnings</p>
           </CardContent>
         </Card>
 
-        {courseData.length > 0 && (
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-gray-700">
-                Course Revenue Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Average Revenue
+            </CardTitle>
+            <TrendingUp className="w-4 h-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              ${averageRevenue.toFixed(2)}
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">per course</p>
+          </CardContent>
+        </Card>
+
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Active Courses
+            </CardTitle>
+            <BookOpen className="w-4 h-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {courseData.length}
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">in total</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg col-span-1">
+          <CardHeader>
+            <CardTitle>Revenue Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={courseData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#6b7280"
-                    angle={-30}
-                    textAnchor="end"
-                    interval={0}
-                    height={60}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    tickFormatter={(value) => `₹${value}`}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-300 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-xs" />
+                  <YAxis className="text-xs" />
                   <Tooltip 
-                    formatter={(value) => [`₹${value}`, 'Amount']}
-                    labelStyle={{ color: '#6b7280' }}
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(147, 51, 234, 0.1)',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    name="Revenue"
-                    stroke="#4a90e2"
-                    strokeWidth={3}
-                    dot={{ stroke: "#4a90e2", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
+                  <Line type="monotone" dataKey="revenue" stroke="#9333ea" strokeWidth={2} dot={{ fill: "#9333ea" }} />
                 </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border-purple-100 dark:border-purple-900/20 shadow-lg col-span-1">
+          <CardHeader>
+            <CardTitle>Course Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={courseData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-300 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(147, 51, 234, 0.1)',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Bar dataKey="price" fill="#9333ea" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

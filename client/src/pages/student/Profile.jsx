@@ -21,10 +21,12 @@ import {
 import { toast } from "sonner";
 
 const Profile = () => {
-  const [name, setName] = useState("");
+  const { data, isLoading, refetch } = useLoadUserQuery();
+  const user = data?.user || {};
+  
+  const [name, setName] = useState(user?.name || "");
   const [profilePhoto, setProfilePhoto] = useState("");
 
-  const { data, isLoading, refetch } = useLoadUserQuery();
   const [
     updateUser,
     {
@@ -36,7 +38,11 @@ const Profile = () => {
     },
   ] = useUpdateUserMutation();
 
-  console.log(data);
+  useEffect(() => {
+    if (user?.name) {
+      setName(user.name);
+    }
+  }, [user]);
 
   const onChangeHandler = (e) => {
     const file = e.target.files?.[0];
@@ -51,128 +57,139 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    refetch();
-  }, []);
-
-  useEffect(() => {
     if (isSuccess) {
+      toast.success(updateUserData?.message || "Profile updated successfully");
       refetch();
-      toast.success(data.message || "Profile updated.");
     }
     if (isError) {
-      toast.error(error.message || "Failed to update profile");
+      toast.error(error?.data?.message || "Something went wrong");
     }
-  }, [error, updateUserData, isSuccess, isError]);
+  }, [isSuccess, isError]);
 
-  if (isLoading) return <h1>Profile Loading...</h1>;
-
-  const user = data && data.user;
-
-  console.log(user);
-  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 my-10">
-      <h1 className="font-bold text-2xl text-center md:text-left">PROFILE</h1>
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 my-5">
-        <div className="flex flex-col items-center">
-          <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4">
-            <AvatarImage
-              src={user?.photoUrl || "https://github.com/shadcn.png"}
-              alt="@shadcn"
-            />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-100 via-white to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Profile Header */}
+        <div className="text-center mb-12 relative">
+          <div className="absolute inset-0 -z-10 blur-3xl opacity-30 dark:opacity-20">
+            <div className="aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-purple-500 to-indigo-500 opacity-30"></div>
+          </div>
+          <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 inline-block mb-4">
+            My Profile
+          </span>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent mb-4">
+            Profile Settings
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Manage your account settings and preferences
+          </p>
         </div>
-        <div>
-          <div className="mb-2">
-            <h1 className="font-semibold text-gray-900 dark:text-gray-100 ">
-              Name:
-              <span className="font-normal text-gray-700 dark:text-gray-300 ml-2">
-                {user.name}
-              </span>
-            </h1>
-          </div>
-          <div className="mb-2">
-            <h1 className="font-semibold text-gray-900 dark:text-gray-100 ">
-              Email:
-              <span className="font-normal text-gray-700 dark:text-gray-300 ml-2">
-                {user.email}
-              </span>
-            </h1>
-          </div>
-          <div className="mb-2">
-            <h1 className="font-semibold text-gray-900 dark:text-gray-100 ">
-              Role:
-              <span className="font-normal text-gray-700 dark:text-gray-300 ml-2">
-                {user.role.toUpperCase()}
-              </span>
-            </h1>
-          </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" className="mt-2">
-                Edit Profile
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Profile</DialogTitle>
-                <DialogDescription>
-                  Make changes to your profile here. Click save when you're
-                  done.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label>Name</Label>
-                  <Input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Name"
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label>Profile Photo</Label>
-                  <Input
-                    onChange={onChangeHandler}
-                    type="file"
-                    accept="image/*"
-                    className="col-span-3"
-                  />
-                </div>
+
+        {/* Profile Content */}
+        <div className="max-w-3xl mx-auto">
+          <div className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl border border-purple-100 dark:border-purple-900/20 p-8">
+            <div className="flex flex-col items-center space-y-6">
+              {/* Avatar */}
+              <Avatar className="h-24 w-24 ring-4 ring-purple-500/20">
+                <AvatarImage
+                  src={user?.photoUrl || "https://github.com/shadcn.png"}
+                  alt={user?.name}
+                />
+                <AvatarFallback className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200 text-2xl">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+
+              {/* User Info */}
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {user?.name}
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400">{user?.email}</p>
+                <p className="text-sm text-purple-600 dark:text-purple-400 capitalize mt-1">
+                  {user?.role}
+                </p>
               </div>
-              <DialogFooter>
-                <Button
-                  disabled={updateUserIsLoading}
-                  onClick={updateUserHandler}
-                >
-                  {updateUserIsLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
-                      wait
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      <div>
-        <h1 className="font-medium text-lg">Courses you're enrolled in</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 my-5">
-          {user.enrolledCourses.length === 0 ? (
-            <h1>You haven't enrolled yet</h1>
-          ) : (
-            user.enrolledCourses.map((course) => (
-              <Course course={course} key={course._id} />
-            ))
-          )}
+
+              {/* Edit Profile Button */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600 text-white rounded-full shadow-lg hover:shadow-purple-500/25 transition-all duration-300">
+                    Edit Profile
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-900/90 border-purple-100 dark:border-purple-900/20">
+                  <DialogHeader>
+                    <DialogTitle>Edit profile</DialogTitle>
+                    <DialogDescription>
+                      Make changes to your profile here. Click save when you're done.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="border-purple-100 dark:border-purple-900/20 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="picture">Profile Photo</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        id="picture"
+                        onChange={onChangeHandler}
+                        className="border-purple-100 dark:border-purple-900/20 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      onClick={updateUserHandler}
+                      disabled={updateUserIsLoading}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600 text-white rounded-full shadow-lg hover:shadow-purple-500/25 transition-all duration-300"
+                    >
+                      {updateUserIsLoading && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Save changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Additional Info */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border border-purple-100 dark:border-purple-900/20">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Enrolled Courses
+                </h3>
+                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                  {user?.enrolledCourses?.length || 0}
+                </p>
+              </div>
+              <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-800/60 rounded-2xl p-6 border border-purple-100 dark:border-purple-900/20">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Member Since
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {new Date(user?.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
