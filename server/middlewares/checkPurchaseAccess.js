@@ -32,3 +32,4 @@ const checkPurchaseAccess = async (req, res, next) => {
 };
 
 export default checkPurchaseAccess;
+

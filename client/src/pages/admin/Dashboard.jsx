@@ -23,20 +23,24 @@ const Dashboard = () => {
   }
 
   // Safely access purchasedCourse with a default empty array
-  const purchasedCourse = data?.purchasedCourse || [];
+  const purchasedCourses = data?.purchasedCourse || [];
 
-  // Only process data if we have purchases
-  const courseData = purchasedCourse.map((course) => ({
-    name: course.courseId?.courseTitle || 'Untitled Course',
-    price: course.courseId?.coursePrice || 0
-  }));
-
-  const totalRevenue = purchasedCourse.reduce(
-    (acc, element) => acc + (element.amount || 0),
+  // Calculate total revenue and sales
+  const totalRevenue = purchasedCourses.reduce(
+    (acc, purchase) => acc + (purchase.amount || 0),
     0
   );
 
-  const totalSales = purchasedCourse.length;
+  const totalSales = purchasedCourses.length;
+
+  // Prepare data for the chart
+  const courseData = purchasedCourses
+    .filter(purchase => purchase.courseId) // Filter out any null courseIds
+    .map(purchase => ({
+      name: purchase.courseId.courseTitle || 'Untitled Course',
+      price: purchase.courseId.coursePrice || 0,
+      revenue: purchase.amount || 0
+    }));
 
   return (
     <div className="p-6">
@@ -62,11 +66,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {courseData.length > 0 ? (
+        {courseData.length > 0 && (
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-gray-700">
-                Course Prices Overview
+                Course Revenue Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -86,12 +90,13 @@ const Dashboard = () => {
                     tickFormatter={(value) => `₹${value}`}
                   />
                   <Tooltip 
-                    formatter={(value) => [`₹${value}`, 'Price']}
+                    formatter={(value) => [`₹${value}`, 'Amount']}
                     labelStyle={{ color: '#6b7280' }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="price"
+                    dataKey="revenue"
+                    name="Revenue"
                     stroke="#4a90e2"
                     strokeWidth={3}
                     dot={{ stroke: "#4a90e2", strokeWidth: 2, r: 4 }}
@@ -99,14 +104,6 @@ const Dashboard = () => {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="shadow-lg col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4">
-            <CardContent className="p-6">
-              <p className="text-center text-gray-500">
-                No course data available to display chart
-              </p>
             </CardContent>
           </Card>
         )}

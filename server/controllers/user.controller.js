@@ -2,6 +2,7 @@ import {User} from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/generateToken.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
+import { CoursePurchase } from "../models/coursePurchase.model.js";
 
 export const register = async (req,res) => {
     try {
@@ -96,22 +97,40 @@ export const logout = async (_, res) => {
 export const getUserProfile = async (req,res) => {
     try {
         const userId = req.id;
-        const user = await User.findById(userId).select("-password").populate("enrolledCourses");
+        const user = await User.findById(userId).select("-password");
         if(!user){
             return res.status(404).json({
-                message:"Profile not found",
-                success:false
+                success:false,
+                message:"User not found"
             })
         }
+
+        // Get purchased courses
+        const purchasedCourses = await CoursePurchase.find({
+            userId: user._id,
+            status: "completed"
+        }).populate({
+            path: 'courseId',
+            select: 'courseTitle coursePrice courseDescription courseThumbnail courseLevel creator',
+            populate: { 
+                path: 'creator',
+                select: 'name email photoUrl'
+            }
+        });
+
+        // Add purchased courses to user response
+        const userResponse = user.toObject();
+        userResponse.enrolledCourses = purchasedCourses.map(purchase => purchase.courseId);
+
         return res.status(200).json({
             success:true,
-            user
+            user: userResponse
         })
     } catch (error) {
         console.log(error);
         return res.status(500).json({
             success:false,
-            message:"Failed to load user"
+            message:"Failed to get profile"
         })
     }
 }

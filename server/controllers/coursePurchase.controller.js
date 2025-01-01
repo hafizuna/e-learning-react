@@ -257,23 +257,29 @@ export const getAllPurchasedCourses = async (req, res) => {
     const userId = req.id;
 
     // Find all completed purchases for the user
-    const purchases = await CoursePurchase.find({
-      userId,
+    const purchasedCourse = await CoursePurchase.find({
       status: "completed"
     }).populate({
       path: 'courseId',
-      populate: [
-        { path: 'creator', select: 'name email' },
-        { path: 'lectures' }
-      ]
+      select: 'courseTitle coursePrice',
+      populate: { 
+        path: 'creator', 
+        select: 'name email' 
+      }
+    }).populate({
+      path: 'userId',
+      select: 'name email'
     });
 
-    // Extract course details from purchases
-    const courses = purchases.map(purchase => purchase.courseId);
-
-    return res.status(200).json({ courses });
+    return res.status(200).json({ 
+      success: true,
+      purchasedCourse
+    });
   } catch (error) {
     console.error('Error getting purchased courses:', error);
-    return res.status(500).json({ message: "Error getting purchased courses" });
+    return res.status(500).json({ 
+      success: false,
+      message: "Error getting purchased courses" 
+    });
   }
 };

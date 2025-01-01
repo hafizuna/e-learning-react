@@ -112,7 +112,7 @@ const appRouter = createBrowserRouter([
             element: <Dashboard />,
           },
           {
-            path: "courses",
+            path: "course",
             element: <CourseTable />,
           },
           {
@@ -124,12 +124,16 @@ const appRouter = createBrowserRouter([
             element: <EditCourse />,
           },
           {
-            path: "lecture/create/:courseId",
+            path: "course/:courseId/lectures",
             element: <CreateLecture />,
           },
           {
-            path: "lecture/edit/:courseId/:lectureId",
+            path: "course/:courseId/lectures/:lectureId",
             element: <EditLecture />,
+          },
+          {
+            path: "lecture/create/:courseId",
+            element: <CreateLecture />,
           },
         ],
       },
